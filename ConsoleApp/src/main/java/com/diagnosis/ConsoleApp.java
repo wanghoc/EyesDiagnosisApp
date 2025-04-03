@@ -23,12 +23,30 @@ public class ConsoleApp {
     }
 
     public static void Run2() throws Exception {
-        Classifier model = loadModel("SharedLibrary/models/decision_tree_model.j48");
+        Classifier model = loadModel("SharedLibrary/models/random_forest_model.rf");
+        // Classifier model = loadModel("SharedLibrary/models/decision_tree_model.j48");
         Instances attributesStructure = loadFeatureStructure("SharedLibrary/models/features.arff");
         Instance instance = getUserInputInstance(attributesStructure);
-        double predictionIndex = model.classifyInstance(instance);
-        String predictedClassLabel = attributesStructure.classAttribute().value((int) predictionIndex);
-        System.out.println("Bệnh dự đoán là: " + predictedClassLabel);
+
+        // Lấy phân phối xác suất cho từng lớp
+        double[] probabilities = model.distributionForInstance(instance);
+
+        // Tạo danh sách các cặp (label, probability)
+        ArrayList<Prediction> predictions = new ArrayList<>();
+        for (int i = 0; i < probabilities.length; i++) {
+            String classLabel = attributesStructure.classAttribute().value(i);
+            predictions.add(new Prediction(classLabel, probabilities[i]));
+        }
+
+        // Sắp xếp theo xác suất giảm dần
+        predictions.sort((p1, p2) -> Double.compare(p2.probability, p1.probability));
+
+        // Hiển thị 3 bệnh có xác suất cao nhất
+        System.out.println("3 bệnh có xác suất cao nhất:");
+        for (int i = 0; i < Math.min(3, predictions.size()); i++) {
+            Prediction prediction = predictions.get(i);
+            System.out.printf("%d. %s (%.2f%%)\n", i + 1, prediction.classLabel, prediction.probability * 100);
+        }
     }
 
     public static Classifier loadModel(String modelPath) throws Exception {
@@ -78,5 +96,15 @@ public class ConsoleApp {
         Instance instance = new DenseInstance(1.0, values.stream().mapToDouble(Double::doubleValue).toArray());
         instance.setDataset(structure);
         return instance;
+    }
+
+    private static class Prediction {
+        String classLabel;
+        double probability;
+
+        public Prediction(String classLabel, double probability) {
+            this.classLabel = classLabel;
+            this.probability = probability;
+        }
     }
 }
