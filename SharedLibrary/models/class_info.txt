@@ -1,0 +1,12 @@
+Class Attribute: Disease
+Values:
+ - Allergic Conjunctivitis
+ - Bacteria Conjunctivitis
+ - Blepharitis
+ - Cataract
+ - Diabetic Retinopathy
+ - Dry eye syndrome
+ - Keratitis
+ - Macular Degeneration
+ - Uevitis 
+ - Viral Conjunctivitis
