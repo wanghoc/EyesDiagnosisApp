@@ -1,0 +1,37 @@
+@relation dataset
+
+@attribute Disease {'Viêm kết mạc dị ứng','Viêm kết mạc do vi khuẩn','Viêm bờ mi','Đục thủy tinh thể','Bệnh lý võng mạc do tiểu đường','Hội chứng khô mắt','Viêm giác mạc','Thoái hóa điểm vàng','Viêm màng bồ đào','Viêm kết mạc do virus'}
+@attribute 'bị ở cả hai mắt' numeric
+@attribute 'bị lan rộng' numeric
+@attribute 'bị chấn thương mắt' numeric
+@attribute 'bị mắt đỏ' numeric
+@attribute 'bị đau hoặc khó chịu trong mắt' numeric
+@attribute 'bị đau hoặc khó chịu quanh mắt' numeric
+@attribute 'bị đau hoặc khó chịu ở mí mắt' numeric
+@attribute 'cảm giác nóng rát ở mắt' numeric
+@attribute 'bị ngứa mắt' numeric
+@attribute 'bị chảy nước mắt' numeric
+@attribute 'bị khô mắt' numeric
+@attribute 'bị nháy mắt thường xuyên' numeric
+@attribute 'cảm giác có vật gì đó trong mắt' numeric
+@attribute 'bị chảy chất nhầy màu xanh hoặc vàng và dính' numeric
+@attribute 'bị chảy nước và trong suốt' numeric
+@attribute 'bị nhạy cảm với ánh sáng' numeric
+@attribute 'bị mí mắt đỏ' numeric
+@attribute 'bị đóng vảy ở mí mắt' numeric
+@attribute 'bị mờ tầm nhìn' numeric
+@attribute 'bị mất thị lực ở trung tâm' numeric
+@attribute 'bị nhìn đường thẳng trông như bị cong' numeric
+@attribute 'bị đốm tối di động' numeric
+@attribute 'bị nhìn đôi' numeric
+@attribute 'bị nheo mắt' numeric
+@attribute 'bị giảm thị lực màu sắc' numeric
+@attribute 'giảm thị lực ban đêm' numeric
+@attribute 'thấy quầng sáng xung quanh vật' numeric
+@attribute 'đeo kính áp tròng' numeric
+@attribute 'bị cảm lạnh' numeric
+@attribute 'bị nhiễm trùng' numeric
+@attribute 'bị tiểu đường' numeric
+@attribute Tuổi numeric
+
+@data

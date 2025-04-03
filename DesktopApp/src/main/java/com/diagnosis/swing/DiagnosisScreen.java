@@ -7,10 +7,10 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
-import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.Insets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import javax.swing.BorderFactory;
@@ -22,8 +22,16 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
+import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
+
+import weka.classifiers.Classifier;
+import weka.core.DenseInstance;
+import weka.core.Instance;
+import weka.core.Instances;
+import weka.core.SerializationHelper;
+import weka.core.converters.ConverterUtils;
 
 public class DiagnosisScreen {
 
@@ -31,35 +39,51 @@ public class DiagnosisScreen {
     private JTabbedPane tabbedPane;
     private JTextArea doctorQuestionArea;
     private int currentQuestionIndex;
-    private String[] questions = {
-        "Mắt bạn có bị đỏ không?",
-        "Bạn có bị sốt không?",
-        "Bạn có bị đau đầu không?",
-        "Bạn có bị đau họng không?",
-        "Bạn có bị ho không?",
-        "Bạn có bị chóng mặt không?",
-        "Bạn có bị mệt mỏi không?",
-        "Bạn có bị buồn nôn không?",
-        "Bạn có bị đau bụng không?",
-        "Bạn có bị khó thở không?"
-    };
-    private String[] symptoms = {
-        "Đỏ mắt",
-        "Sốt",
-        "Đau đầu",
-        "Đau họng",
-        "Ho",
-        "Chóng mặt",
-        "Mệt mỏi",
-        "Buồn nôn",
-        "Đau bụng",
-        "Khó thở"
-    };
+    private Classifier model;
+    private Instances attributesStructure;
+    private Instance currentInstance;
+    private ArrayList<Double> instanceValues;
 
     public DiagnosisScreen(JTabbedPane tabbedPane) {
         this.tabbedPane = tabbedPane;
         selectedSymptoms = new ArrayList<>();
-        currentQuestionIndex = 0;
+        currentQuestionIndex = 1; // Bắt đầu từ thuộc tính thứ 2 (sau Disease)
+        instanceValues = new ArrayList<>();
+
+        try {
+            model = (Classifier) SerializationHelper.read("SharedLibrary/models/random_forest_model.rf");
+            attributesStructure = loadFeatureStructure("SharedLibrary/models/features.arff");
+            // Khởi tạo instanceValues với giá trị đầu tiên là 0.0 cho Disease
+            instanceValues.add(0.0);
+        } catch (Exception e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Lỗi khi tải model: " + e.getMessage());
+        }
+    }
+
+    private Instances loadFeatureStructure(String filePath) throws Exception {
+        ConverterUtils.DataSource source = new ConverterUtils.DataSource(filePath);
+        Instances structure = source.getStructure();
+        structure.setClassIndex(0);
+        return structure;
+    }
+
+    private ImageIcon loadImage(String imageName, int width, int height) {
+        try {
+            // Tải hình ảnh từ resources
+            java.net.URL imageUrl = DiagnosisScreen.class.getResource("/images/" + imageName);
+            if (imageUrl != null) {
+                ImageIcon icon = new ImageIcon(imageUrl);
+                Image image = icon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
+                return new ImageIcon(image);
+            } else {
+                System.err.println("Không tìm thấy hình ảnh: " + imageName);
+                return null;
+            }
+        } catch (Exception e) {
+            System.err.println("Lỗi khi tải hình ảnh " + imageName + ": " + e.getMessage());
+            return null;
+        }
     }
 
     public JPanel createDiagnosisPanel() {
@@ -74,36 +98,34 @@ public class DiagnosisScreen {
         gbc.insets = new Insets(10, 10, 10, 10);
 
         // Bác sĩ (bên trái)
-        JLabel doctorLabel = new JLabel("Bác sĩ", JLabel.CENTER);
-        doctorLabel.setFont(new Font("Arial", Font.BOLD, 16));
-        doctorLabel.setForeground(new Color(74, 144, 226));
-        try {
-            java.net.URL doctorUrl = getClass().getClassLoader().getResource("images/doctor.png");
-            if (doctorUrl != null) {
-                ImageIcon doctorIcon = new ImageIcon(doctorUrl);
-                Image doctorImage = doctorIcon.getImage().getScaledInstance(100, 100, Image.SCALE_SMOOTH);
-                doctorLabel.setIcon(new ImageIcon(doctorImage));
-                doctorLabel.setText(""); // Xóa chữ "Bác sĩ" nếu đã có hình ảnh
-            } else {
-                System.out.println("Không tìm thấy hình ảnh bác sĩ");
-                doctorLabel.setText("Bác sĩ");
-            }
-        } catch (Exception e) {
-            System.out.println("Lỗi khi tải hình ảnh bác sĩ: " + e.getMessage());
-            doctorLabel.setText("Bác sĩ");
+        JPanel doctorPanel = new JPanel();
+        doctorPanel.setLayout(new BoxLayout(doctorPanel, BoxLayout.Y_AXIS));
+        doctorPanel.setBackground(Color.WHITE);
+
+        JLabel doctorImageLabel = new JLabel();
+        ImageIcon doctorIcon = loadImage("doctor.png", 100, 100);
+        if (doctorIcon != null) {
+            doctorImageLabel.setIcon(doctorIcon);
         }
+
+        JLabel doctorTextLabel = new JLabel("Bác sĩ", JLabel.CENTER);
+        doctorTextLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        doctorTextLabel.setForeground(new Color(74, 144, 226));
+
+        doctorPanel.add(doctorImageLabel);
+        doctorPanel.add(doctorTextLabel);
 
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.weightx = 0.3;
         gbc.fill = GridBagConstraints.BOTH;
-        mainPanel.add(doctorLabel, gbc);
+        mainPanel.add(doctorPanel, gbc);
 
         // Câu hỏi của bác sĩ (ở giữa)
         JPanel questionPanel = new JPanel(new BorderLayout());
         questionPanel.setBackground(new Color(200, 220, 255)); // Màu nền nhạt cho textbox
         questionPanel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
-        doctorQuestionArea = new JTextArea(questions[currentQuestionIndex]);
+        doctorQuestionArea = new JTextArea(getQuestionText(currentQuestionIndex));
         doctorQuestionArea.setFont(new Font("Arial", Font.PLAIN, 14));
         doctorQuestionArea.setWrapStyleWord(true);
         doctorQuestionArea.setLineWrap(true);
@@ -118,30 +140,28 @@ public class DiagnosisScreen {
         mainPanel.add(questionPanel, gbc);
 
         // Bệnh nhân (bên phải)
-        JLabel patientLabel = new JLabel("Bệnh nhân", JLabel.CENTER);
-        patientLabel.setFont(new Font("Arial", Font.BOLD, 16));
-        patientLabel.setForeground(new Color(40, 167, 69));
-        try {
-            java.net.URL patientUrl = getClass().getClassLoader().getResource("images/patient.png");
-            if (patientUrl != null) {
-                ImageIcon patientIcon = new ImageIcon(patientUrl);
-                Image patientImage = patientIcon.getImage().getScaledInstance(100, 100, Image.SCALE_SMOOTH);
-                patientLabel.setIcon(new ImageIcon(patientImage));
-                patientLabel.setText(""); // Xóa chữ "Bệnh nhân" nếu đã có hình ảnh
-            } else {
-                System.out.println("Không tìm thấy hình ảnh bệnh nhân");
-                patientLabel.setText("Bệnh nhân");
-            }
-        } catch (Exception e) {
-            System.out.println("Lỗi khi tải hình ảnh bệnh nhân: " + e.getMessage());
-            patientLabel.setText("Bệnh nhân");
+        JPanel patientPanel = new JPanel();
+        patientPanel.setLayout(new BoxLayout(patientPanel, BoxLayout.Y_AXIS));
+        patientPanel.setBackground(Color.WHITE);
+
+        JLabel patientImageLabel = new JLabel();
+        ImageIcon patientIcon = loadImage("patient.png", 100, 100);
+        if (patientIcon != null) {
+            patientImageLabel.setIcon(patientIcon);
         }
+
+        JLabel patientTextLabel = new JLabel("Bệnh nhân", JLabel.CENTER);
+        patientTextLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        patientTextLabel.setForeground(new Color(40, 167, 69));
+
+        patientPanel.add(patientImageLabel);
+        patientPanel.add(patientTextLabel);
 
         gbc.gridx = 2;
         gbc.gridy = 0;
         gbc.weightx = 0.3;
         gbc.fill = GridBagConstraints.BOTH;
-        mainPanel.add(patientLabel, gbc);
+        mainPanel.add(patientPanel, gbc);
 
         // Panel chứa hai nút "Có" và "Không"
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
@@ -174,181 +194,274 @@ public class DiagnosisScreen {
         return panel;
     }
 
-    private void handleAnswer(boolean answer) {
-        if (answer) {
-            selectedSymptoms.add(symptoms[currentQuestionIndex]);
+    private String getQuestionText(int attributeIndex) {
+        if (attributeIndex == attributesStructure.numAttributes() - 1) {
+            return "Vui lòng nhập tuổi của bạn:";
         }
+        String attributeName = attributesStructure.attribute(attributeIndex).name();
+        return "Bạn có " + attributeName + " không?";
+    }
 
-        currentQuestionIndex++;
-        if (currentQuestionIndex < questions.length) {
-            doctorQuestionArea.setText(questions[currentQuestionIndex]);
-        } else {
-            if (selectedSymptoms.isEmpty()) {
-                JOptionPane.showMessageDialog(null, "Bạn không có triệu chứng nào được chọn!");
-                currentQuestionIndex = 0;
-                selectedSymptoms.clear();
-                doctorQuestionArea.setText(questions[currentQuestionIndex]);
+    private void handleAnswer(boolean answer) {
+        if (currentQuestionIndex < attributesStructure.numAttributes() - 1) {
+            // Thêm câu trả lời vào instanceValues
+            instanceValues.add(answer ? 1.0 : 0.0);
+
+            // Chuyển sang câu hỏi tiếp theo
+            currentQuestionIndex++;
+
+            // Nếu là câu hỏi cuối cùng (về tuổi)
+            if (currentQuestionIndex == attributesStructure.numAttributes() - 1) {
+                // Hiển thị dialog nhập tuổi
+                String ageStr = JOptionPane.showInputDialog(null, "Vui lòng nhập tuổi của bạn:", "Nhập tuổi",
+                        JOptionPane.QUESTION_MESSAGE);
+                try {
+                    double age = Double.parseDouble(ageStr);
+                    instanceValues.add(age);
+                    showDiagnosisResult();
+                } catch (NumberFormatException e) {
+                    JOptionPane.showMessageDialog(null, "Vui lòng nhập số tuổi hợp lệ!");
+                    currentQuestionIndex--;
+                    instanceValues.remove(instanceValues.size() - 1);
+                }
             } else {
-                tabbedPane.setComponentAt(0, createResultPanel());
+                // Cập nhật câu hỏi tiếp theo
+                doctorQuestionArea.setText(getQuestionText(currentQuestionIndex));
             }
         }
     }
 
-    private JPanel createResultPanel() {
+    private boolean hasNoSymptoms() {
+        // Bỏ qua phần tử đầu tiên (Disease) và phần tử cuối cùng (Age)
+        for (int i = 1; i < instanceValues.size() - 1; i++) {
+            if (instanceValues.get(i) == 1.0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void showDiagnosisResult() {
+        try {
+            // Kiểm tra nếu không có triệu chứng nào được chọn
+            if (hasNoSymptoms()) {
+                JOptionPane.showMessageDialog(null, "Không có triệu chứng nào được chọn!");
+                // Reset và bắt đầu chẩn đoán lại
+                currentQuestionIndex = 1;
+                instanceValues.clear();
+                instanceValues.add(0.0);
+                doctorQuestionArea.setText(getQuestionText(currentQuestionIndex));
+                return;
+            }
+
+            Instance instance = new DenseInstance(1.0,
+                    instanceValues.stream().mapToDouble(Double::doubleValue).toArray());
+            instance.setDataset(attributesStructure);
+
+            double[] probabilities = model.distributionForInstance(instance);
+            String[] diseases = new String[probabilities.length];
+            for (int i = 0; i < probabilities.length; i++) {
+                diseases[i] = attributesStructure.classAttribute().value(i);
+            }
+
+            tabbedPane.setComponentAt(0, createResultPanel(diseases[0], probabilities, diseases));
+        } catch (Exception e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Lỗi khi dự đoán: " + e.getMessage());
+        }
+
+        // Reset lại trạng thái
+        currentQuestionIndex = 1;
+        instanceValues.clear();
+        instanceValues.add(0.0); // Thêm lại giá trị đầu tiên cho Disease
+    }
+
+    // Add this new class inside DiagnosisScreen
+    private static class DiseaseResult implements Comparable<DiseaseResult> {
+        String name;
+        double probability;
+
+        public DiseaseResult(String name, double probability) {
+            this.name = name;
+            this.probability = probability;
+        }
+
+        @Override
+        public int compareTo(DiseaseResult other) {
+            return Double.compare(other.probability, this.probability); // Sort descending
+        }
+    }
+
+    private JPanel createResultPanel(String diagnosis, double[] probabilities, String[] diseases) {
+        // Create list of disease results and sort them
+        ArrayList<DiseaseResult> diseaseResults = new ArrayList<>();
+        for (int i = 0; i < diseases.length; i++) {
+            diseaseResults.add(new DiseaseResult(diseases[i], probabilities[i]));
+        }
+        Collections.sort(diseaseResults);
+
         JPanel panel = new JPanel(new BorderLayout(10, 10));
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         panel.setBackground(Color.WHITE);
-
-        JLabel resultTitle = new JLabel("Kết quả chẩn đoán", JLabel.LEFT);
-        resultTitle.setFont(new Font("Arial", Font.BOLD, 16));
-
-        JLabel symptomsLabel = new JLabel("Triệu chứng bạn: " + String.join(", ", selectedSymptoms));
-        symptomsLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-
-        JLabel diseasesLabel = new JLabel("Bệnh có thể mắc phải:");
-        diseasesLabel.setFont(new Font("Arial", Font.BOLD, 14));
-
-        JPanel diseasesPanel = new JPanel();
-        diseasesPanel.setLayout(new BoxLayout(diseasesPanel, BoxLayout.Y_AXIS));
-        diseasesPanel.setBackground(Color.WHITE);
-        diseasesPanel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
-        diseasesPanel.setPreferredSize(new Dimension(300, 100));
-
-        JPanel fluPanel = new JPanel(new BorderLayout(5, 5));
-        fluPanel.setBackground(Color.WHITE);
-        JLabel fluLabel = new JLabel("Cảm cúm");
-        JProgressBar fluBar = new JProgressBar(0, 100);
-        fluBar.setValue(80);
-        fluBar.setStringPainted(true);
-        fluBar.setForeground(new Color(135, 206, 250));
-        fluBar.setBackground(Color.WHITE);
-        JLabel fluPercentage = new JLabel("80%");
-        fluPanel.add(fluLabel, BorderLayout.WEST);
-        fluPanel.add(fluBar, BorderLayout.CENTER);
-        fluPanel.add(fluPercentage, BorderLayout.EAST);
-
-        JPanel throatPanel = new JPanel(new BorderLayout(5, 5));
-        throatPanel.setBackground(Color.WHITE);
-        JLabel throatLabel = new JLabel("Viêm họng");
-        JProgressBar throatBar = new JProgressBar(0, 100);
-        throatBar.setValue(65);
-        throatBar.setStringPainted(true);
-        throatBar.setForeground(new Color(135, 206, 250));
-        throatBar.setBackground(Color.WHITE);
-        JLabel throatPercentage = new JLabel("65%");
-        throatPanel.add(throatLabel, BorderLayout.WEST);
-        throatPanel.add(throatBar, BorderLayout.CENTER);
-        throatPanel.add(throatPercentage, BorderLayout.EAST);
-
-        JPanel sinusPanel = new JPanel(new BorderLayout(5, 5));
-        sinusPanel.setBackground(Color.WHITE);
-        JLabel sinusLabel = new JLabel("Viêm xoang");
-        JProgressBar sinusBar = new JProgressBar(0, 100);
-        sinusBar.setValue(45);
-        sinusBar.setStringPainted(true);
-        sinusBar.setForeground(new Color(135, 206, 250));
-        sinusBar.setBackground(Color.WHITE);
-        JLabel sinusPercentage = new JLabel("45%");
-        sinusPanel.add(sinusLabel, BorderLayout.WEST);
-        sinusPanel.add(sinusBar, BorderLayout.CENTER);
-        sinusPanel.add(sinusPercentage, BorderLayout.EAST);
-
-        diseasesPanel.add(fluPanel);
-        diseasesPanel.add(Box.createVerticalStrut(5));
-        diseasesPanel.add(throatPanel);
-        diseasesPanel.add(Box.createVerticalStrut(5));
-        diseasesPanel.add(sinusPanel);
-
-        JPanel bottomPanel = new JPanel(new GridLayout(1, 2, 10, 10));
-        bottomPanel.setBackground(Color.WHITE);
-
-        JPanel reasonsPanel = new JPanel();
-        reasonsPanel.setLayout(new BoxLayout(reasonsPanel, BoxLayout.Y_AXIS));
-        reasonsPanel.setBackground(Color.WHITE);
-        reasonsPanel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
-        JLabel reasonsLabel = new JLabel("Lý do có thể dẫn tới bệnh:");
-        reasonsLabel.setFont(new Font("Arial", Font.BOLD, 14));
-        reasonsPanel.add(reasonsLabel);
-        reasonsPanel.add(Box.createVerticalStrut(5));
-
-        String[] reasons = {
-            "Thời tiết thay đổi đột ngột",
-            "Tiếp xúc với nguồn bệnh",
-            "Suy giảm hệ miễn dịch",
-            "Thiếu ngủ hoặc mệt mỏi kéo dài"
-        };
-        for (String reason : reasons) {
-            JLabel reasonLabel = new JLabel("• " + reason);
-            reasonLabel.setFont(new Font("Arial", Font.PLAIN, 12));
-            reasonsPanel.add(reasonLabel);
-        }
-
-        JPanel advicePanel = new JPanel();
-        advicePanel.setLayout(new BoxLayout(advicePanel, BoxLayout.Y_AXIS));
-        advicePanel.setBackground(Color.WHITE);
-        advicePanel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
-        JLabel adviceLabel = new JLabel("Gợi ý xử lý:");
-        adviceLabel.setFont(new Font("Arial", Font.BOLD, 14));
-        advicePanel.add(adviceLabel);
-        advicePanel.add(Box.createVerticalStrut(5));
-
-        JLabel shouldLabel = new JLabel("Nên:");
-        shouldLabel.setFont(new Font("Arial", Font.BOLD, 12));
-        advicePanel.add(shouldLabel);
-        String[] shouldAdvice = {
-            "Nghỉ ngơi đầy đủ",
-            "Uống nhiều nước",
-            "Đến gặp bác sĩ nếu triệu chứng nặng"
-        };
-        for (String advice : shouldAdvice) {
-            JLabel adviceItem = new JLabel("• " + advice);
-            adviceItem.setFont(new Font("Arial", Font.PLAIN, 12));
-            advicePanel.add(adviceItem);
-        }
-
-        advicePanel.add(Box.createVerticalStrut(10));
-        JLabel shouldNotLabel = new JLabel("Không nên:");
-        shouldNotLabel.setFont(new Font("Arial", Font.BOLD, 12));
-        advicePanel.add(shouldNotLabel);
-        String[] shouldNotAdvice = {
-            "Làm việc quá sức"
-        };
-        for (String advice : shouldNotAdvice) {
-            JLabel adviceItem = new JLabel("• " + advice);
-            adviceItem.setFont(new Font("Arial", Font.PLAIN, 12));
-            advicePanel.add(adviceItem);
-        }
-
-        bottomPanel.add(reasonsPanel);
-        bottomPanel.add(advicePanel);
-
-        JButton backButton = new JButton("Trở về");
-        backButton.setFont(new Font("Arial", Font.BOLD, 14));
-        backButton.setBackground(new Color(74, 144, 226));
-        backButton.setForeground(Color.WHITE);
-        backButton.setPreferredSize(new Dimension(100, 30));
-        backButton.addActionListener(e -> {
-            currentQuestionIndex = 0;
-            selectedSymptoms.clear();
-            tabbedPane.setComponentAt(0, createDiagnosisPanel());
-        });
 
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
         mainPanel.setBackground(Color.WHITE);
-        mainPanel.add(resultTitle);
-        mainPanel.add(Box.createVerticalStrut(10));
-        mainPanel.add(symptomsLabel);
-        mainPanel.add(Box.createVerticalStrut(10));
-        mainPanel.add(diseasesLabel);
-        mainPanel.add(Box.createVerticalStrut(5));
+
+        // Title and warning note
+        JPanel headerPanel = new JPanel();
+        headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.Y_AXIS));
+        headerPanel.setBackground(Color.WHITE);
+        headerPanel.setAlignmentX(0.0f);
+
+        JLabel resultTitle = new JLabel("Kết quả chẩn đoán", JLabel.LEFT);
+        resultTitle.setFont(new Font("Arial", Font.BOLD, 20));
+        resultTitle.setAlignmentX(0.0f);
+
+        JLabel noteLabel = new JLabel(
+                "Lưu ý: Đây chỉ là kết quả tham khảo, hãy đi khám với bác sĩ để có kết quả chính xác hơn!");
+        noteLabel.setFont(new Font("Arial", Font.ITALIC, 12));
+        noteLabel.setForeground(Color.RED);
+        noteLabel.setAlignmentX(0.0f);
+
+        headerPanel.add(resultTitle);
+        headerPanel.add(Box.createVerticalStrut(5));
+        headerPanel.add(noteLabel);
+
+        // Diseases panel with fixed width progress bars
+        JPanel diseasesPanel = new JPanel();
+        diseasesPanel.setLayout(new BoxLayout(diseasesPanel, BoxLayout.Y_AXIS));
+        diseasesPanel.setBackground(Color.WHITE);
+        diseasesPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
+        diseasesPanel.setAlignmentX(0.0f);
+
+        // Find longest disease name to set fixed label width
+        int maxWidth = diseaseResults.stream()
+                .mapToInt(d -> new JLabel(d.name).getPreferredSize().width)
+                .max()
+                .orElse(150);
+        maxWidth += 20; // Add some padding
+
+        // Show only top 3 diseases
+        for (int i = 0; i < Math.min(3, diseaseResults.size()); i++) {
+            DiseaseResult result = diseaseResults.get(i);
+
+            JPanel diseasePanel = new JPanel(new BorderLayout(10, 5));
+            diseasePanel.setBackground(Color.WHITE);
+            diseasePanel.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
+
+            JLabel diseaseLabel = new JLabel(result.name);
+            diseaseLabel.setFont(new Font("Arial", Font.BOLD, 14));
+            diseaseLabel.setPreferredSize(new Dimension(maxWidth, 20));
+
+            JPanel barPanel = new JPanel(new BorderLayout());
+            barPanel.setBackground(Color.WHITE);
+
+            JProgressBar progressBar = new JProgressBar(0, 100);
+            progressBar.setValue((int) (result.probability * 100));
+            progressBar.setStringPainted(true);
+            progressBar.setForeground(new Color(74, 144, 226));
+            progressBar.setBackground(Color.WHITE);
+            progressBar.setPreferredSize(new Dimension(200, 20)); // Fixed width for progress bar
+
+            JLabel percentageLabel = new JLabel(String.format("%.1f%%", result.probability * 100));
+            percentageLabel.setPreferredSize(new Dimension(50, 20));
+
+            barPanel.add(progressBar, BorderLayout.CENTER);
+            barPanel.add(percentageLabel, BorderLayout.EAST);
+
+            diseasePanel.add(diseaseLabel, BorderLayout.WEST);
+            diseasePanel.add(barPanel, BorderLayout.CENTER);
+
+            diseasesPanel.add(diseasePanel);
+            diseasesPanel.add(Box.createVerticalStrut(10));
+        }
+
+        // Add recommendations panel
+        JPanel recommendationsPanel = new JPanel();
+        recommendationsPanel.setLayout(new BoxLayout(recommendationsPanel, BoxLayout.Y_AXIS));
+        recommendationsPanel.setBackground(Color.WHITE);
+        recommendationsPanel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
+        recommendationsPanel.setAlignmentX(0.0f);
+
+        // Nguyên nhân
+        JLabel causesTitle = new JLabel("Nguyên nhân có thể:");
+        causesTitle.setFont(new Font("Arial", Font.BOLD, 14));
+        recommendationsPanel.add(causesTitle);
+        recommendationsPanel.add(Box.createVerticalStrut(5));
+
+        String[] causes = {
+                "• Thời tiết thay đổi đột ngột",
+                "• Tiếp xúc với nguồn bệnh",
+                "• Suy giảm hệ miễn dịch"
+        };
+        for (String cause : causes) {
+            JLabel causeLabel = new JLabel(cause);
+            causeLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+            recommendationsPanel.add(causeLabel);
+        }
+
+        recommendationsPanel.add(Box.createVerticalStrut(10));
+
+        // Nên
+        JLabel dosTitle = new JLabel("Nên:");
+        dosTitle.setFont(new Font("Arial", Font.BOLD, 14));
+        recommendationsPanel.add(dosTitle);
+        recommendationsPanel.add(Box.createVerticalStrut(5));
+
+        String[] dos = {
+                "• Nghỉ ngơi đầy đủ",
+                "• Uống nhiều nước",
+                "• Đến gặp bác sĩ để khám chi tiết"
+        };
+        for (String do_ : dos) {
+            JLabel doLabel = new JLabel(do_);
+            doLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+            recommendationsPanel.add(doLabel);
+        }
+
+        recommendationsPanel.add(Box.createVerticalStrut(10));
+
+        // Không nên
+        JLabel dontsTitle = new JLabel("Không nên:");
+        dontsTitle.setFont(new Font("Arial", Font.BOLD, 14));
+        recommendationsPanel.add(dontsTitle);
+        recommendationsPanel.add(Box.createVerticalStrut(5));
+
+        String[] donts = {
+                "• Tự ý dùng thuốc khi chưa có chỉ định",
+                "• Làm việc quá sức",
+                "• Chủ quan với các triệu chứng"
+        };
+        for (String dont : donts) {
+            JLabel dontLabel = new JLabel(dont);
+            dontLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+            recommendationsPanel.add(dontLabel);
+        }
+
+        // Back button
+        JButton backButton = new JButton("Chẩn đoán lại");
+        backButton.setFont(new Font("Arial", Font.BOLD, 14));
+        backButton.setBackground(new Color(74, 144, 226));
+        backButton.setForeground(Color.WHITE);
+        backButton.setAlignmentX(0.0f);
+        backButton.addActionListener(e -> {
+            currentQuestionIndex = 1;
+            selectedSymptoms.clear();
+            instanceValues.clear();
+            instanceValues.add(0.0);
+            tabbedPane.setComponentAt(0, createDiagnosisPanel());
+        });
+
+        mainPanel.add(headerPanel);
+        mainPanel.add(Box.createVerticalStrut(20));
         mainPanel.add(diseasesPanel);
         mainPanel.add(Box.createVerticalStrut(20));
-        mainPanel.add(bottomPanel); // Sửa thành bottomPanel
+        mainPanel.add(recommendationsPanel);
         mainPanel.add(Box.createVerticalStrut(20));
-        mainPanel.add(backButton); // Đưa nút "Trở về" trở lại mainPanel
+        mainPanel.add(backButton);
 
-        panel.add(mainPanel, BorderLayout.NORTH); // Đặt mainPanel ở NORTH để khôi phục bố cục
+        panel.add(new JScrollPane(mainPanel), BorderLayout.CENTER);
         return panel;
     }
 }
