@@ -1,0 +1,37 @@
+@relation dataset
+
+@attribute Disease {'Viêm kết mạc dị ứng','Viêm kết mạc do vi khuẩn','Viêm bờ mi','Đục thủy tinh thể','Bệnh lý võng mạc do tiểu đường','Hội chứng khô mắt','Viêm giác mạc','Thoái hóa điểm vàng','Viêm màng bồ đào','Viêm kết mạc do virus'}
+@attribute 'Cả hai mắt' numeric
+@attribute 'Lan rộng' numeric
+@attribute 'Chấn thương mắt' numeric
+@attribute 'Mắt đỏ' numeric
+@attribute 'Đau hoặc khó chịu trong mắt' numeric
+@attribute 'Đau hoặc khó chịu quanh mắt' numeric
+@attribute 'Đau hoặc khó chịu ở mí mắt' numeric
+@attribute 'Cảm giác nóng rát' numeric
+@attribute 'Ngứa' numeric
+@attribute 'Chảy nước mắt' numeric
+@attribute 'Khô' numeric
+@attribute 'Nháy mắt thường xuyên' numeric
+@attribute 'Có vật gì đó trong mắt' numeric
+@attribute 'Chất nhầy màu xanh hoặc vàng và dính' numeric
+@attribute 'Chảy nước và trong suốt' numeric
+@attribute 'Nhạy cảm với ánh sáng' numeric
+@attribute 'Mí mắt đỏ' numeric
+@attribute 'Mí mắt đóng vảy' numeric
+@attribute 'Tầm nhìn mờ' numeric
+@attribute 'Mất thị lực ở trung tâm' numeric
+@attribute 'Đường thẳng trông như bị cong' numeric
+@attribute 'Đốm tối di động' numeric
+@attribute 'Nhìn đôi' numeric
+@attribute 'Nheo mắt' numeric
+@attribute 'Thị lực màu sắc' numeric
+@attribute 'Thị lực ban đêm' numeric
+@attribute 'Thấy quầng sáng' numeric
+@attribute 'Kính áp tròng' numeric
+@attribute 'Cảm lạnh' numeric
+@attribute 'Nhiễm trùng' numeric
+@attribute 'Tiểu đường' numeric
+@attribute Tuổi numeric
+
+@data

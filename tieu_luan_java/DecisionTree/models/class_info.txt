@@ -1,0 +1,12 @@
+Class Attribute: Disease
+Values:
+ - Viêm kết mạc dị ứng
+ - Viêm kết mạc do vi khuẩn
+ - Viêm bờ mi
+ - Đục thủy tinh thể
+ - Bệnh lý võng mạc do tiểu đường
+ - Hội chứng khô mắt
+ - Viêm giác mạc
+ - Thoái hóa điểm vàng
+ - Viêm màng bồ đào
+ - Viêm kết mạc do virus
