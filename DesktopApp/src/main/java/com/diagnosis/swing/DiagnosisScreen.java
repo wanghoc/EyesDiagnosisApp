@@ -231,8 +231,29 @@ public class DiagnosisScreen {
         }
     }
 
+    private boolean hasNoSymptoms() {
+        // Bỏ qua phần tử đầu tiên (Disease) và phần tử cuối cùng (Age)
+        for (int i = 1; i < instanceValues.size() - 1; i++) {
+            if (instanceValues.get(i) == 1.0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private void showDiagnosisResult() {
         try {
+            // Kiểm tra nếu không có triệu chứng nào được chọn
+            if (hasNoSymptoms()) {
+                JOptionPane.showMessageDialog(null, "Không có triệu chứng nào được chọn!");
+                // Reset và bắt đầu chẩn đoán lại
+                currentQuestionIndex = 1;
+                instanceValues.clear();
+                instanceValues.add(0.0);
+                doctorQuestionArea.setText(getQuestionText(currentQuestionIndex));
+                return;
+            }
+
             Instance instance = new DenseInstance(1.0,
                     instanceValues.stream().mapToDouble(Double::doubleValue).toArray());
             instance.setDataset(attributesStructure);
